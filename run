@@ -1,0 +1,13 @@
+#!/bin/bash
+echo -e "<html>
+<body>
+<h1>go_mail</h1>
+<p>Tese 1</p>
+<p>Test 2</p>
+<p>Test 3</p>
+</body>
+<html>
+\nEOF
+" | \
+./go_mail "$(date +'%Y-%m-%d %H:%M:%S')" marcio.pessoa@gmail.com \
+  "Nagios System" marcio.pessoa@gmail.com

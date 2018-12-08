@@ -1,200 +1,117 @@
 #!/usr/bin/php
 <?php
-
-/******************************************************************************
-
-	Go Mail
-
-	Send email with or without SMTP server authentication,
-	with or without SMTP encryption.
-
-	Version: 0.01b
-
-	Description: Program file
-
-	Sintax:
-	./go_mail <Subject> <from@example.com> <From Name> <destination@example.com> 
-
-******************************************************************************/
-
-// Include requided libraries
-{
-	// Load 
-	require_once ("Mail.php");
-	
-	// Load configuration file
-	require_once ("go_mail.conf.php");
-
-	// Show debug information
-	echo $debug_message = ($debug) ? "Include requided libraries: Complete.\n" : null;
+// go_mail
+//
+// Version: 0.01
+//
+// File description: Main file
+require_once("Mail.php");
+require_once("go_mail.conf");
+echo $debug_message = $debug ? "Include requided libraries: Complete.\n" : null;
+$return_code = array('OK'       => 0,
+                     'WARNING'  => 1,
+                     'CRITICAL' => 2,
+                     'UNKNOWN'  => 3,
+                     'ERROR'    => 4);
+echo $debug_message = $debug ? "Main definitions: Complete.\n" : null;
+$email_html = false;
+echo $debug_message = ($debug) ? "Email compose settings: Complete.\n" : null;
+$email_subject = $argv[1];
+$email_from = $argv[2];
+$email_from_name = $argv[3];
+$email_to = $argv[4];
+$email_content_type = "text/html; charset=iso-8859-1rn";
+$email_body = null;
+$email_body = readline(null) . "\n";
+while(strpos($email_body, "EOF") == null) {
+    $email_body .= readline(null) . "\n";
 }
 
-// Main definitions
-{
-	// Return codes
-	$return_code = array ('OK'       => 0,
-	                      'WARNING'  => 1,
-	                      'CRITICAL' => 2,
-	                      'UNKNOWN'  => 3,
-	                      'ERROR'    => 4);
-
-	// Show debug information
-	echo $debug_message = ($debug) ? "Main definitions: Complete.\n" : null;
+if ($debug) {
+    echo ("Arguments array list:\n");
+    print_r($argv);
 }
+echo $debug_message = ($debug) ? "Email content: Complete.\n" : null;
+send_mail ($email_subject, $email_from, $email_from_name, $email_to, $email_body);
 
-// Email compose settings
-{
-	$email_html = false;
 
-	// Show debug information
-	echo $debug_message = ($debug) ? "Email compose settings: Complete.\n" : null;
-}
-
-// Email content
-{
-	$email_subject = $argv[1];
-	$email_from = $argv[2];
-	$email_from_name = $argv[3];
-	$email_to = $argv[4];
-    $email_content_type = "text/html; charset=iso-8859-1rn";
-
-	// Read interactive user line from command line, used to mail body.
-	$email_body = null;
-	$email_body = readline(null) . "\n";
-	while(strpos($email_body, "EOF") == null) {
-		$email_body .= readline(null) . "\n";
-	}
-
-	// 
-	if ($debug) {
-		echo ("Arguments array list:\n");
-		print_r($argv);
-	}
-
-	// Show debug information
-	echo $debug_message = ($debug) ? "Email content: Complete.\n" : null;
-}
-
-// Send email
-{
-	send_mail ($email_subject, $email_from, $email_from_name, $email_to, $email_body);
+// send_mail
+//
+// Send email with SMTP server authentication.
+//
+// Description:
+// send_mail_auth ()
+//
+// Parameter:
+// $email_subject
+//
+// $email_from
+//
+// $email_from_name
+//
+// $email_to
+//
+// $email_body
+//
+// Returns:
+// A resource to be used on LDAP queries.
+function send_mail($email_subject, $email_from, $email_from_name, $email_to, $email_body) {
+    global $debug;
+    global $return_code;
+    global $email_smtp;
+    global $email_smtp_port;
+    global $email_auth;
+    global $email_user;
+    global $email_pass;
+    global $email_content_type;
+    $email_header = array ('From'         => $email_from_name . " <" . $email_from . ">",
+                           'To'           => $email_to,
+                           'Subject'      => $email_subject,
+                           'Content-Type' => $email_content_type);
+    $smtp = Mail::factory('smtp', array ('host'     => $email_smtp,
+                                         'port'     => $email_smtp_port,
+                                         'auth'     => $email_auth,
+                                         'username' => $email_user,
+                                         'password' => $email_pass));
+    $mail_return = $smtp->send($email_to, $email_header, $email_body);
+    error_mgmt ("send_mail", $mail_return);
 }
 
 
-
-/******************************************************************************
-
-Functions
-
-******************************************************************************/
-
-function send_mail ($email_subject, $email_from, $email_from_name, $email_to, $email_body) {
-/*
-
-	send_mail
-
-	Send email with SMTP server authentication.
-
-	Description:
-	send_mail_auth ()
-
-	Parameter:
-	$email_subject
-		
-	$email_from
-		
-	$email_from_name
-		
-	$email_to
-		
-	$email_body
-		
-
-	Returns: 
-	A resource to be used on LDAP queries.
-
-*/
-
-	// Import general variables
-	global $debug;
-	global $return_code;
-
-	// Import SMTP server authentication credentials
-	global $email_smtp;
-	global $email_smtp_port;
-	global $email_auth;
-	global $email_user;
-	global $email_pass;
-	global $email_content_type;
-
-	// Build mail header array
-	$email_header = array ('From'         => $email_from_name . " <" . $email_from . ">",
-					       'To'           => $email_to,
-					       'Subject'      => $email_subject,
-					       'Content-Type' => $email_content_type);
-
-	// Build authentication array
-	$smtp = Mail::factory('smtp', array ('host'     => $email_smtp,
-	                                     'port'     => $email_smtp_port,
-	                                     'auth'     => $email_auth,
-	                                     'username' => $email_user,
-	                                     'password' => $email_pass));
-
-	// Send mail and get return message from SMTP server
-	$mail_return = $smtp->send($email_to, $email_header, $email_body);
-
-	// 
-	error_mgmt ("send_mail", $mail_return);
-}
-
+// error_mgmt
+//
+// Error management sequence.
+//
+// Description:
+// error_mgmt ()
+//
+// Parameter:
+// $return_type
+//
+// $return_message
+//
+// Returns:
+// A resource to be used on LDAP queries.
 function error_mgmt ($return_type, $return_message) {
-/*
-
-	error_mgmt
-
-	Error management sequence.
-
-	Description:
-	error_mgmt ()
-
-	Parameter:
-	$return_type
-		
-
-	$return_message
-		
-
-	Returns: 
-	A resource to be used on LDAP queries.
-
-*/
-
-	// Import general variables
-	global $debug;
-	global $return_code;
-
-	// 
-	switch ($return_type) {
-
-		case "send_mail":
-			// Use SMTP message to build a short report on debug mode
-			if (PEAR::isError($return_message)) {
-				$status_message = ($debug) ? "ERROR: " . $return_message->getMessage() . "\n" : null;
-				$status_return = $return_code['ERROR'];
-			}
-			else {
-				$status_message = ($debug) ? "Message sent: OK.\n" : null;
-				$status_return = $return_code['OK'];
-			}
-			break;
-
-		default:
-			$status_message = ($debug) ? "Unknown error.\n" : null;
-			$status_return = $return_code['UNKNOWN'];
-			break;
-	}
-
-	echo ($status_message);
-	exit ($status_return);
+    global $debug;
+    global $return_code;
+    switch ($return_type) {
+        case "send_mail":
+            if (PEAR::isError($return_message)) {
+                $status_message = ($debug) ? "ERROR: " . $return_message->getMessage() . "\n" : null;
+                $status_return = $return_code['ERROR'];
+            }
+            else {
+                $status_message = ($debug) ? "Message sent: OK.\n" : null;
+                $status_return = $return_code['OK'];
+            }
+            break;
+        default:
+            $status_message = ($debug) ? "Unknown error.\n" : null;
+            $status_return = $return_code['UNKNOWN'];
+            break;
+    }
+    echo ($status_message);
+    exit ($status_return);
 }
 ?>
